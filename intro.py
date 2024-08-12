@@ -2,6 +2,7 @@
 # import pandas as pd
 # from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
 # from io import BytesIO
+# from datetime import datetime
 
 # # JavaScript to toggle cell value between "P" and "A" on click, with restrictions
 # cell_click_js = JsCode("""
@@ -71,6 +72,10 @@
 #     # Updated DataFrame after clicking and editing
 #     updated_df = pd.DataFrame(grid_response['data'])
 
+#     # Shaka dropdown and date picker
+#     shaka_option = st.selectbox("SHAKHA", ["SAI MANDIR","JESHTH NAGARIK MAANCH","GANESH MAIDAN","PARMARTH NIKETAN","SANKALP SIDDHI","BEST COLONY","DATTA MANDIR","MANGALMURTI GANESH MANDIR","PANDUMASTER"])
+#     selected_date = st.date_input("Select Date", datetime.today())
+
 #     # Save changes button
 #     if st.button('SAVE CHANGES'):
 #         # Create a new Excel workbook in memory
@@ -80,6 +85,9 @@
 #         writer.close()
 #         output.seek(0)
 
+#         # Generate file name based on dropdown and date picker
+#         file_name = f"{shaka_option}_{selected_date.strftime('%Y-%m-%d')}.xlsx"
+
 #         # Display updated DataFrame
 #         st.write("Updated DataFrame:")
 #         st.write(updated_df)
@@ -88,11 +96,11 @@
 #         st.download_button(
 #             label='Download Updated Excel File',
 #             data=output,
-#             file_name='updated_data.xlsx',
+#             file_name=file_name,
 #             mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 #         )
         
-#         st.success("Changes successfully saved. Download the updated file above.")
+#         st.success(f"Changes successfully saved. Download the updated file as {file_name} above.")
 
 import streamlit as st
 import pandas as pd
@@ -124,6 +132,17 @@ function(e) {
 }
 """)
 
+# JavaScript to handle cell value changes
+cell_value_changed_js = JsCode("""
+function(e) {
+    let rowNode = e.api.getRowNode(e.rowIndex);
+    let newRowData = rowNode.data;
+    newRowData['TOTAL'] = Object.values(newRowData).slice(8, 68).filter(value => value === "P").length;
+    rowNode.setData(newRowData);
+    window.streamlit.setData({data: e.api.getDataAsCsv()});
+}
+""")
+
 # File uploader
 uploaded_file = st.file_uploader("Upload an Excel file", type=["xlsx"])
 st.markdown(" ")
@@ -152,7 +171,10 @@ if uploaded_file:
     # Set 'TOTAL' column as non-editable
     gb.configure_column('TOTAL', editable=False)
 
-    gb.configure_grid_options(onCellClicked=cell_click_js)
+    gb.configure_grid_options(
+        onCellClicked=cell_click_js,
+        onCellValueChanged=cell_value_changed_js
+    )
     grid_options = gb.build()
 
     # Display the DataFrame with AgGrid
@@ -165,11 +187,14 @@ if uploaded_file:
         reload_data=True
     )
 
-    # Updated DataFrame after clicking and editing
-    updated_df = pd.DataFrame(grid_response['data'])
+    # Update DataFrame in session state
+    if 'updated_df' not in st.session_state:
+        st.session_state.updated_df = pd.DataFrame(grid_response['data'])
+    else:
+        st.session_state.updated_df = pd.DataFrame(grid_response['data'])
 
     # Shaka dropdown and date picker
-    shaka_option = st.selectbox("SHAKHA", ["SAI MANDIR","JESHTH NAGARIK MAANCH","GANESH MAIDAN","PARMARTH NIKETAN","SANKALP SIDDHI","BEST COLONY","DATTA MANDIR","MANGALMURTI GANESH MANDIR","PANDUMASTER"])
+    shaka_option = st.selectbox("Select Shaka", ["S1", "S2"])
     selected_date = st.date_input("Select Date", datetime.today())
 
     # Save changes button
@@ -177,7 +202,7 @@ if uploaded_file:
         # Create a new Excel workbook in memory
         output = BytesIO()
         writer = pd.ExcelWriter(output, engine='openpyxl')
-        updated_df.to_excel(writer, index=False, sheet_name='Sheet1')
+        st.session_state.updated_df.to_excel(writer, index=False, sheet_name='Sheet1')
         writer.close()
         output.seek(0)
 
@@ -186,7 +211,7 @@ if uploaded_file:
 
         # Display updated DataFrame
         st.write("Updated DataFrame:")
-        st.write(updated_df)
+        st.write(st.session_state.updated_df)
 
         # Provide a download link for the new Excel file
         st.download_button(
