@@ -194,7 +194,7 @@ if uploaded_file:
         st.session_state.updated_df = pd.DataFrame(grid_response['data'])
 
     # Shaka dropdown and date picker
-    shaka_option = st.selectbox("Select Shaka", ["S1", "S2"])
+    shaka_option = st.selectbox("SHAKHA", ["SAI MANDIR","JESHTH NAGARIK MAANCH","GANESH MAIDAN","PARMARTH NIKETAN","SANKALP SIDDHI","BEST COLONY","DATTA MANDIR","MANGALMURTI GANESH MANDIR","PANDUMASTER"])
     selected_date = st.date_input("Select Date", datetime.today())
 
     # Save changes button
